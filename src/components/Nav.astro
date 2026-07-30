@@ -1,0 +1,176 @@
+---
+// Nav.astro — Sticky navigation bar
+---
+
+<header class="site-nav" id="site-nav">
+  <div class="container nav-inner">
+    <a href="/" class="nav-name" aria-label="Home">
+      Muhammad Usman Butt
+    </a>
+
+    <nav class="nav-links" aria-label="Primary navigation">
+      <a href="#projects" class="nav-link">Projects</a>
+      <a href="#experience" class="nav-link">Experience</a>
+      <a href="#skills" class="nav-link">Skills</a>
+      <a href="#about" class="nav-link">About</a>
+    </nav>
+
+    <div class="nav-cta">
+      <a
+        href="/cv-placeholder.pdf"
+        class="btn btn--filled"
+        download
+        aria-label="Download CV"
+      >
+        Download CV
+      </a>
+      <div class="nav-socials">
+        <a
+          href="https://github.com/usmanbutt-dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="nav-social-link"
+          aria-label="GitHub"
+        >
+          GitHub ↗
+        </a>
+        <a
+          href="mailto:butt7666@gmail.com"
+          class="nav-social-link"
+          aria-label="Email"
+        >
+          Email
+        </a>
+      </div>
+    </div>
+
+    <!-- Mobile hamburger -->
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+</header>
+
+<style>
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-bg);
+    border-bottom: var(--border);
+  }
+
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-8);
+    height: 60px;
+  }
+
+  .nav-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-base);
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+  }
+  .nav-name:hover { color: var(--color-accent); }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+  }
+
+  .nav-link {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+    transition: color 0.15s ease;
+  }
+  .nav-link:hover { color: var(--color-ink); }
+
+  .nav-cta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+  }
+
+  .nav-socials {
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  .nav-social-link {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+    letter-spacing: 0.04em;
+    transition: color 0.15s ease;
+  }
+  .nav-social-link:hover { color: var(--color-accent); }
+
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    padding: var(--space-2);
+    cursor: pointer;
+  }
+  .nav-toggle span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--color-ink);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .nav-links,
+    .nav-socials {
+      display: none;
+    }
+
+    .nav-toggle {
+      display: flex;
+    }
+
+    .nav-cta {
+      gap: var(--space-3);
+    }
+
+    .btn {
+      padding: var(--space-2) var(--space-3);
+      font-size: 0.65rem;
+    }
+  }
+</style>
+
+<script>
+  const toggle = document.getElementById('nav-toggle');
+  const navLinks = document.querySelector('.nav-links') as HTMLElement | null;
+
+  toggle?.addEventListener('click', () => {
+    const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!isOpen));
+
+    if (navLinks) {
+      navLinks.style.display = isOpen ? 'none' : 'flex';
+      navLinks.style.flexDirection = 'column';
+      navLinks.style.position = 'absolute';
+      navLinks.style.top = '60px';
+      navLinks.style.left = '0';
+      navLinks.style.right = '0';
+      navLinks.style.background = 'var(--color-bg)';
+      navLinks.style.borderBottom = 'var(--border-ink)';
+      navLinks.style.padding = '1rem var(--page-pad)';
+      navLinks.style.gap = '1rem';
+    }
+  });
+</script>
