@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
   useScroll,
@@ -6,7 +6,8 @@ import {
   ContactShadows,
   Html,
   RoundedBox,
-  Text
+  Text,
+  Environment
 } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -52,101 +53,328 @@ const KEYBOARD_LAYOUT = [
   [{u:1.25, l:"Ctrl"}, {u:1.25, l:"Win"}, {u:1.25, l:"Alt"}, {u:6.25, l:""}, {u:1.25, l:"Alt"}, {u:1.25, l:"Fn"}, {u:0.83, l:"<"}, {u:0.84, l:"v"}, {u:0.83, l:">"}]
 ];
 
+const KEYBOARD_SEQUENCES = [
+  ["MUHAMMAD", "USMAN", "BUTT"],
+  ["FULLSTACK", "DEVELOPER", "REACT JS"],
+  ["JAVASCRIPT", "NEXT JS", "NODE JS"]
+];
+
 const keysData = [];
 const U_WIDTH = 2.9 / 15;
 const U_DEPTH = 1.1 / 6;
 const GAP = 0.015;
 
-KEYBOARD_LAYOUT.forEach((row, rowIndex) => {
+KEYBOARD_LAYOUT.forEach((row, rIdx) => {
   let currentX = -2.9 / 2;
-  const z = -1.1 / 2 + rowIndex * U_DEPTH + U_DEPTH / 2;
+  const z = -1.1 / 2 + rIdx * U_DEPTH + U_DEPTH / 2;
   
-  row.forEach((keyDef) => {
+  row.forEach((keyDef, cIdx) => {
     const w = keyDef.u * U_WIDTH;
     const x = currentX + w / 2;
-    keysData.push({ x, z, w: w - GAP, d: U_DEPTH - GAP, l: keyDef.l, rand: Math.random() });
+    
+    let isTextSlot = false;
+    let textRow = -1;
+    let textCol = -1;
+    
+    // Rows 1, 2, 3 act as text slots (Number, QWERTY, ASDF rows)
+    if (rIdx >= 1 && rIdx <= 3) {
+      isTextSlot = true;
+      textRow = rIdx - 1;
+      textCol = cIdx;
+    }
+    
+    keysData.push({ 
+      x, z, w: w - GAP, d: U_DEPTH - GAP, rand: Math.random(), 
+      isTextSlot, textRow, textCol, rIdx, cIdx,
+      originalLabel: keyDef.l,
+      isPowerButton: (rIdx === 0 && cIdx === 13)
+    });
+    
     currentX += w;
   });
 });
 
-function ProceduralKeyboard({ introStartRef }) {
-  const groupRef = React.useRef();
-  const baseGeometry = React.useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
-  const FINAL_HEIGHT = 0.025;
+const getSequenceChars = (sequence) => {
+  const chars = new Array(keysData.length).fill("");
+  const rowLimits = [14, 14, 13];
   
-  useFrame(({ clock }) => {
-    if (!groupRef.current || introStartRef.current === null) return;
-    const time = clock.elapsedTime;
+  // 1. Assign core text to the designated center text slots
+  keysData.forEach((key, i) => {
+    if (key.isTextSlot) {
+      const word = sequence[key.textRow] || "";
+      const len = Math.min(word.length, rowLimits[key.textRow]);
+      const startOffset = Math.floor((rowLimits[key.textRow] - len) / 2);
+      
+      if (key.textCol >= startOffset && key.textCol < startOffset + len) {
+        chars[i] = word[key.textCol - startOffset];
+      }
+    }
+  });
+  
+  return chars;
+};
+
+const precomputedSequences = KEYBOARD_SEQUENCES.map(getSequenceChars);
+
+// ------------------------------------------------------------------------------------------------
+// 1. PROCEDURAL TEXTURES (Generated once in memory via Canvas API to save network requests/FPS)
+// ------------------------------------------------------------------------------------------------
+const createCarbonTexture = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  
+  ctx.fillStyle = '#888';
+  ctx.fillRect(0, 0, 64, 64);
+  
+  ctx.fillStyle = '#555';
+  ctx.fillRect(0, 0, 32, 32);
+  ctx.fillRect(32, 32, 32, 32);
+  
+  for (let i = 0; i < 32; i += 4) {
+    ctx.fillStyle = '#222';
+    ctx.fillRect(0, i, 32, 2);
+    ctx.fillRect(32, 32 + i, 32, 2);
+    ctx.fillRect(i, 32, 2, 32);
+    ctx.fillRect(32 + i, 0, 2, 32);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(40, 40); 
+  return texture;
+};
+
+const createPlasticTexture = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.createImageData(256, 256);
+  for (let i = 0; i < imgData.data.length; i += 4) {
+    const v = Math.random() * 255;
+    imgData.data[i] = v;
+    imgData.data[i+1] = v;
+    imgData.data[i+2] = v;
+    imgData.data[i+3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2, 2); 
+  return texture;
+};
+
+// Singleton textures so they are only generated once per page load
+let globalCarbonTexture = null;
+let globalPlasticTexture = null;
+
+function ProceduralKeyboard({ introStartRef, isCustomModeRef }) {
+  const textGroupRef = useRef();
+  const instancedMeshRef = useRef();
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const baseGeometry = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
+  const plasticTexture = useMemo(() => {
+    if (!globalPlasticTexture) globalPlasticTexture = createPlasticTexture();
+    return globalPlasticTexture;
+  }, []);
+  const FINAL_HEIGHT = 0.025;
+  const KEY_ANIMATION_DURATION = 0.6;
+  const PHASE_DURATION = 5.0; // Seconds per phrase
+  const TRANSITION_DURATION = 0.6; // Seconds to retract
+  
+  const modeRef = useRef(true);
+  const modeSwitchTimeRef = useRef(-10.0);
+  const customStartTimeRef = useRef(3.3);
+  
+  useFrame((state, delta) => {
+    if (introStartRef.current === null) return;
+    const time = state.clock.elapsedTime;
     const introElapsed = time - introStartRef.current;
     
-    // Wait until the camera intro finishes and begins its push-in (3.3s)
     const KEYBOARD_START = 3.3; 
     
-    groupRef.current.children.forEach((keyGroup, i) => {
-      const key = keysData[i];
-      let scaleY = 0;
+    if (introElapsed < KEYBOARD_START) {
+      if (instancedMeshRef.current) instancedMeshRef.current.visible = false;
+      if (textGroupRef.current) textGroupRef.current.visible = false;
+    } else {
+      if (instancedMeshRef.current) instancedMeshRef.current.visible = true;
+      if (textGroupRef.current) textGroupRef.current.visible = true;
       
-      // Map key's X position (-1.45 to 1.45) to a normalized 0 to 1 range
-      const nx = (key.x + 1.45) / 2.9; 
-      
-      // Calculate when this specific key should start growing
-      // Sweeps from left (nx=0) to right (nx=1) over 1.2 seconds
-      const keyDelay = KEYBOARD_START + (nx * 1.2); 
-      const keyGrowTime = introElapsed - keyDelay;
-      
-      if (keyGrowTime > 0) {
-        // Individual key takes 0.6 seconds to grow
-        const progress = keyGrowTime / 0.6;
-        const eased = THREE.MathUtils.clamp(progress, 0, 1);
-        scaleY = Math.pow(eased, 0.5) * FINAL_HEIGHT; 
+      if (isCustomModeRef.current !== modeRef.current) {
+        modeRef.current = isCustomModeRef.current;
+        modeSwitchTimeRef.current = time;
+        if (modeRef.current === true) {
+          customStartTimeRef.current = time + 0.5; // wait for standard keys to retract
+        }
       }
       
-      const mesh = keyGroup.children[0];
-      const text = keyGroup.children[1];
+      const timeSinceSwitch = time - modeSwitchTimeRef.current;
       
-      mesh.scale.set(key.w, Math.max(scaleY, 0.001), key.d);
-      mesh.position.set(key.x, scaleY / 2, key.z);
-      
-      if (text) {
-        text.position.set(key.x, scaleY + 0.001, key.z);
+      let customCycleTime = time - customStartTimeRef.current;
+      let customPhaseIdx = 0;
+      let customPhaseTime = 0;
+      let customTimeRemaining = 0;
+      if (customCycleTime >= 0) {
+        customPhaseIdx = Math.floor(customCycleTime / PHASE_DURATION) % precomputedSequences.length;
+        customPhaseTime = customCycleTime % PHASE_DURATION;
+        customTimeRemaining = PHASE_DURATION - customPhaseTime;
       }
+      const currentChars = precomputedSequences[customPhaseIdx];
+
+      keysData.forEach((key, i) => {
+        const cascadeDelay = (key.x + 1.5) * 0.15;
+        let scaleT = 0;
+        let char = "";
+        
+        if (modeRef.current === true) {
+            // CUSTOM MODE
+            // 1. Standard keys retracting
+            let standardRetractT = TRANSITION_DURATION - timeSinceSwitch + cascadeDelay;
+            let standardScale = 0;
+            if (standardRetractT >= TRANSITION_DURATION) standardScale = 1.0;
+            else if (standardRetractT > 0) {
+                const t = standardRetractT / TRANSITION_DURATION;
+                standardScale = t * t * t;
+            }
+            
+            // 2. Custom keys animating
+            let customScale = 0;
+            let customIsVisible = (currentChars[i] !== "" && currentChars[i] !== " ");
+            if (customIsVisible && customCycleTime >= 0) {
+                const keyLocalTime = customPhaseTime - cascadeDelay;
+                const keyLocalTimeRemaining = customTimeRemaining - cascadeDelay;
+                if (keyLocalTime > 0 && keyLocalTimeRemaining > 0) {
+                    if (keyLocalTime < KEY_ANIMATION_DURATION) {
+                        const t = keyLocalTime / KEY_ANIMATION_DURATION;
+                        customScale = t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+                    } else if (keyLocalTimeRemaining < TRANSITION_DURATION) {
+                        const t = keyLocalTimeRemaining / TRANSITION_DURATION;
+                        customScale = t * t * t;
+                    } else {
+                        customScale = 1.0;
+                    }
+                }
+            }
+            
+            scaleT = Math.max(standardScale, customScale);
+            char = standardScale > customScale ? key.originalLabel : currentChars[i];
+            
+        } else {
+            // STANDARD MODE
+            // 1. Custom keys retracting
+            let customRetractT = TRANSITION_DURATION - timeSinceSwitch + cascadeDelay;
+            let customScale = 0;
+            let customIsVisible = (currentChars[i] !== "" && currentChars[i] !== " ");
+            if (customIsVisible) {
+                if (customRetractT >= TRANSITION_DURATION) customScale = 1.0;
+                else if (customRetractT > 0) {
+                    const t = customRetractT / TRANSITION_DURATION;
+                    customScale = t * t * t;
+                }
+            }
+            
+            // 2. Standard keys popping up
+            const standardStartTime = timeSinceSwitch - 0.5;
+            let standardScale = 0;
+            if (standardStartTime > 0) {
+                const keyLocalTime = standardStartTime - cascadeDelay;
+                if (keyLocalTime > 0) {
+                    if (keyLocalTime < KEY_ANIMATION_DURATION) {
+                        const t = keyLocalTime / KEY_ANIMATION_DURATION;
+                        standardScale = t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+                    } else {
+                        standardScale = 1.0;
+                    }
+                }
+            }
+            
+            scaleT = Math.max(customScale, standardScale);
+            char = customScale > standardScale ? currentChars[i] : key.originalLabel;
+        }
+        
+        let scaleX = key.w;
+        let scaleZ = key.d;
+        const scaleY = Math.max(0.0001, scaleT * FINAL_HEIGHT);
+        let currentY = scaleY / 2;
+        
+        // Completely bury and shrink inactive keys so they don't catch light
+        if (scaleT <= 0.001) {
+          scaleX = 0.0001;
+          scaleZ = 0.0001;
+          currentY = -0.1;
+        }
+
+        dummy.position.set(key.x, currentY, key.z);
+        dummy.scale.set(scaleX, scaleY, scaleZ);
+        dummy.updateMatrix();
+        if (instancedMeshRef.current) {
+          instancedMeshRef.current.setMatrixAt(i, dummy.matrix);
+        }
+
+        const textGroup = textGroupRef.current.children[i];
+        if (textGroup && textGroup.children.length > 0) {
+          const textNode = textGroup.children[0];
+          
+          if (textNode.text !== char) {
+             textNode.text = char;
+          }
+          
+          if (scaleY <= 0.001 || char === "") {
+            textNode.visible = false;
+          } else {
+            textNode.visible = true;
+            textNode.position.set(key.x, currentY + scaleY / 2 + 0.001, key.z);
+          }
+        }
+      });
       
-      if (scaleY <= 0.0001) {
-        mesh.visible = false;
-        if (text) text.visible = false;
-      } else {
-        mesh.visible = true;
-        if (text) text.visible = true;
+      if (instancedMeshRef.current) {
+        instancedMeshRef.current.instanceMatrix.needsUpdate = true;
       }
-      
-      // Static Alienware cyan backlight
-      mesh.material.emissive.set('#38bdf8');
-      mesh.material.emissiveIntensity = scaleY > 0.005 ? 0.3 : 0; 
-    });
+    }
   });
 
   return (
-    <group ref={groupRef} position={[0, 0.02, 0.2]}>
-      {keysData.map((key, i) => (
-        <group key={i}>
-          <mesh geometry={baseGeometry}>
-            <meshStandardMaterial color="#000000" metalness={0.9} roughness={0.4} />
-          </mesh>
-          {key.l && (
-            <Text
-              position={[key.x, FINAL_HEIGHT + 0.001, key.z]}
-              rotation={[-Math.PI / 2, 0, 0]}
-              fontSize={0.06}
-              color="#d4d4d8"
-              anchorX="center"
-              anchorY="middle"
-              depthOffset={-1}
-            >
-              {key.l}
-            </Text>
-          )}
-        </group>
-      ))}
+    <group position={[0, 0.02, 0.2]}>
+      {/* PROCEDURAL KEYBOARD */}
+      <instancedMesh 
+        ref={instancedMeshRef} 
+        args={[null, null, keysData.length]} 
+        receiveShadow 
+        castShadow
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial 
+          color="#0c0c0e" 
+          metalness={0.3} 
+          roughness={0.8} 
+          bumpMap={plasticTexture}
+          bumpScale={0.002}
+        />
+      </instancedMesh>
+      
+      <group ref={textGroupRef}>
+        {keysData.map((key, i) => (
+          <group key={i}>
+              <Text
+                position={[key.x, FINAL_HEIGHT + 0.001, key.z]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                fontSize={0.06}
+                color="#d4d4d8"
+                anchorX="center"
+                anchorY="middle"
+                depthOffset={-1}
+                font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZJhjp-Ek-_EeAmM.woff"
+              >
+                {precomputedSequences[0][i]}
+              </Text>
+          </group>
+        ))}
+      </group>
     </group>
   );
 }
@@ -167,7 +395,8 @@ function getTargetPose(r1, isMobile, elapsedTime) {
 
   if (isMobile) {
     if (r1 < 0.2) {
-      return { x: 0, y: -0.2, z: 0.5, rotX: 0, rotY: 0, rotZ: 0, scale: 0.6, animT: 0, camX: 0, camY: 2.5, camZ: 2.5, camTargetX: 0, camTargetY: -0.2, camTargetZ: 0 };
+      // Zoomed out much more for portrait mobile screens so horizontal width of laptop fits without clipping
+      return { x: 0, y: -0.2, z: 0.5, rotX: 0, rotY: 0, rotZ: 0, scale: 0.6, animT: 0, camX: 0, camY: 4.5, camZ: 4.5, camTargetX: 0, camTargetY: -0.2, camTargetZ: 0.5 };
     } else if (r1 < 0.4) {
       return { x: 0, y: -0.1, z: 0, rotX: -0.05, rotY: -0.25, rotZ: 0, scale: 0.4, animT: 0, ...defCam };
     } else if (r1 < 0.6) {
@@ -181,7 +410,7 @@ function getTargetPose(r1, isMobile, elapsedTime) {
   // Desktop precisely tuned for a 3.6 unit wide procedural laptop to stay fully in bounds
   if (r1 < 0.2) {
     // Laptop remains flat on the floor (rotX: 0), camera moves UP and looks DOWN at the keyboard!
-    return { x: 0, y: -1.5, z: 0.5, rotX: 0, rotY: 0, rotZ: 0, scale: 1.2, animT: 0, camX: 0, camY: 2.0, camZ: 2.0, camTargetX: 0, camTargetY: -1.5, camTargetZ: 0.5 };
+    return { x: 0, y: -1.5, z: 0.5, rotX: 0, rotY: 0, rotZ: 0, scale: 1.2, animT: 0, camX: 0, camY: 1.8, camZ: 2, camTargetX: 0, camTargetY: -1.5, camTargetZ: 0.5 };
   } else if (r1 < 0.4) {
     return { x: 1.8, y: -1.0, z: 0, rotX: -0.08, rotY: -0.4, rotZ: 0, scale: 0.55, animT: 0, ...defCam };
   } else if (r1 < 0.6) {
@@ -205,10 +434,19 @@ function ScreenContent({ stage }) {
     lineHeight: 1.7,
     overflow: 'hidden',
     boxSizing: 'border-box',
+    position: 'relative'
   };
 
   return (
     <div style={base}>
+      {/* CSS Glass Glare Overlay */}
+      <div style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 40%)',
+        pointerEvents: 'none',
+        zIndex: 10
+      }} />
       <style>{`
         @keyframes usb-blink { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
         .usb-cursor { display:inline-block; width:7px; height:14px; background:#8b5cf6; animation: usb-blink 1s step-end infinite; vertical-align:middle; margin-left:2px; }
@@ -267,14 +505,16 @@ function ScreenContent({ stage }) {
   );
 }
 
-export default function Laptop() {
+export default function Laptop(props) {
   const groupRef = useRef();
   const shadowRef = useRef();
   const hingeRef = useRef();
   const bobRef = useRef();
+  const underglowRef = useRef();
   
   const scroll = useScroll();
   const isMobile = useIsMobile();
+  const isCustomModeRef = useRef(true);
 
   const [stage, setStage] = useState(0);
   const stageRef = useRef(0);
@@ -282,12 +522,16 @@ export default function Laptop() {
   const prevOffsetRef = useRef(0);
   const cameraTargetRef = useRef(new THREE.Vector3(0, 0, 0));
 
+  const carbonTexture = useMemo(() => {
+    if (!globalCarbonTexture) globalCarbonTexture = createCarbonTexture();
+    return globalCarbonTexture;
+  }, []);
+
   useFrame((state, delta) => {
     if (!groupRef.current || !hingeRef.current) return;
 
     const r1 = scroll.offset;
 
-    // Which of the 5 narrative stages we're in — drives the screen content
     const newStage = r1 < 0.2 ? 0 : r1 < 0.4 ? 1 : r1 < 0.6 ? 2 : r1 < 0.8 ? 3 : 4;
     if (newStage !== stageRef.current) {
       stageRef.current = newStage;
@@ -300,9 +544,6 @@ export default function Laptop() {
 
     const target = getTargetPose(r1, isMobile, state.clock.elapsedTime);
 
-    // Hinge logic mapping
-    // Closed (animT = 1): Lid folded down flat (Math.PI / 2 + 0.05 so it sits on keyboard)
-    // Open (animT = 0): Lid titled slightly back (-0.35 radians)
     const HINGE_CLOSED = Math.PI / 2 + 0.02; 
     const HINGE_OPEN = -0.35;
     const targetHingeAngle = target.animT === 1 ? HINGE_CLOSED : HINGE_OPEN;
@@ -325,31 +566,28 @@ export default function Laptop() {
       let currentCamY = 0;
       let currentCamZ = 5;
       let currentCamTargetX = 0;
-      let currentCamTargetY = target.y; // Keep looking at laptop during drop
+      let currentCamTargetY = target.y;
       let currentCamTargetZ = 0;
 
       if (introT < 0.15) {
-        // Phase 1 (0 to 0.15): Drop into center, small, lid closed.
         const t = introT / 0.15;
-        const ease = 1 - Math.pow(1 - t, 3); // Ease out cubic
+        const ease = 1 - Math.pow(1 - t, 3);
         currentY = THREE.MathUtils.lerp(8, target.y, ease);
         currentZ = THREE.MathUtils.lerp(0, target.z, ease);
       } else if (introT < 0.45) {
-        // Phase 2 (0.15 to 0.45): Rotations, zoom in, open lid. (Slower)
         const t = (introT - 0.15) / 0.3;
-        const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; // Ease in out cubic
+        const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         currentRotY = THREE.MathUtils.lerp(0, Math.PI * 4, ease);
         currentScale = THREE.MathUtils.lerp(0.3, target.scale, ease);
         currentHinge = THREE.MathUtils.lerp(HINGE_CLOSED, targetHingeAngle, ease);
         currentY = target.y;
         currentZ = target.z;
         const wideCamZ = target.camZ + 1.0;
-        currentCamZ = THREE.MathUtils.lerp(5, wideCamZ, ease); // Zoom in simultaneously
+        currentCamZ = THREE.MathUtils.lerp(5, wideCamZ, ease);
       } else if (introT < 0.55) {
-        // Phase 3 (0.45 to 0.55): Tilt camera above the laptop to a wide shot
         const t = (introT - 0.45) / 0.1;
-        const ease = 1 - Math.pow(1 - t, 3); // Ease out cubic
-        currentRotY = Math.PI * 4; // preserve final spin
+        const ease = 1 - Math.pow(1 - t, 3);
+        currentRotY = Math.PI * 4;
         currentScale = target.scale;
         currentHinge = targetHingeAngle;
         
@@ -368,9 +606,8 @@ export default function Laptop() {
         currentCamTargetY = THREE.MathUtils.lerp(target.y, target.camTargetY, ease);
         currentCamTargetZ = THREE.MathUtils.lerp(0, wideCamTargetZ, ease);
       } else if (introT < 0.65) {
-        // Phase 4 (0.55 to 0.65): QUICK Push in camera to look closely at keyboard growing
         const t = (introT - 0.55) / 0.1;
-        const ease = t * t * (3 - 2 * t); // Smooth step
+        const ease = t * t * (3 - 2 * t);
         currentRotY = Math.PI * 4;
         currentScale = target.scale;
         currentHinge = targetHingeAngle;
@@ -389,7 +626,6 @@ export default function Laptop() {
         currentCamTargetY = target.camTargetY;
         currentCamTargetZ = THREE.MathUtils.lerp(wideCamTargetZ, target.camTargetZ, ease);
       } else {
-        // Phase 5 (0.65 to 1.0): HOLD camera closely while keyboard finishes growing
         currentRotY = Math.PI * 4;
         currentScale = target.scale;
         currentHinge = targetHingeAngle;
@@ -413,11 +649,18 @@ export default function Laptop() {
       state.camera.position.set(currentCamX, currentCamY, currentCamZ);
       cameraTargetRef.current.set(currentCamTargetX, currentCamTargetY, currentCamTargetZ);
       state.camera.lookAt(cameraTargetRef.current);
+      if (underglowRef.current) {
+        const time = state.clock.elapsedTime;
+        const r = (Math.sin(time * 2.0) + 1) / 2;
+        const g = (Math.sin(time * 2.0 + 2) + 1) / 2;
+        const b = (Math.sin(time * 2.0 + 4) + 1) / 2;
+        underglowRef.current.material.color.setRGB(r * 0.8, g * 0.8, b * 0.8);
+        underglowRef.current.material.emissive.setRGB(r * 0.5, g * 0.5, b * 0.5);
+      }
     } else {
       const damp = THREE.MathUtils.damp;
-      const lambda = 4; // Lower is smoother/slower, higher is snappier
+      const lambda = 4;
 
-      // Normalize rotation Y to prevent violently unwinding the intro spin
       if (groupRef.current.rotation.y >= Math.PI * 2) {
         groupRef.current.rotation.y %= (Math.PI * 2);
       }
@@ -433,10 +676,8 @@ export default function Laptop() {
       const newScale = damp(currentScale, target.scale, lambda, delta);
       groupRef.current.scale.set(newScale, newScale, newScale);
 
-      // Smooth hinge animation
       hingeRef.current.rotation.x = damp(hingeRef.current.rotation.x, targetHingeAngle, lambda * 1.5, delta);
       
-      // Smooth camera animation
       state.camera.position.x = damp(state.camera.position.x, target.camX, lambda, delta);
       state.camera.position.y = damp(state.camera.position.y, target.camY, lambda, delta);
       state.camera.position.z = damp(state.camera.position.z, target.camZ, lambda, delta);
@@ -445,10 +686,17 @@ export default function Laptop() {
       cameraTargetRef.current.y = damp(cameraTargetRef.current.y, target.camTargetY, lambda, delta);
       cameraTargetRef.current.z = damp(cameraTargetRef.current.z, target.camTargetZ, lambda, delta);
       state.camera.lookAt(cameraTargetRef.current);
+
+      if (underglowRef.current) {
+        const time = state.clock.elapsedTime;
+        const r = (Math.sin(time * 1.5) + 1) / 2;
+        const g = (Math.sin(time * 1.5 + 2) + 1) / 2;
+        const b = (Math.sin(time * 1.5 + 4) + 1) / 2;
+        underglowRef.current.material.color.setRGB(r * 0.8, g * 0.8, b * 0.8);
+        underglowRef.current.material.emissive.setRGB(r * 0.5, g * 0.5, b * 0.5);
+      }
     }
 
-    // Idle breathing — applied to the inner bobRef using absolute assignment.
-    // Runs unconditionally every frame so it floats naturally during the intro too!
     if (bobRef.current) {
       const bob = Math.sin(state.clock.elapsedTime * 1.1) * 0.08 * settle;
       const sway = Math.sin(state.clock.elapsedTime * 0.7) * 0.04 * settle;
@@ -469,20 +717,34 @@ export default function Laptop() {
   const ProceduralLaptopGeometry = (
     <group ref={bobRef} position={[0, 0, 0]}>
       {/* 1. BASE ASSEMBLY */}
-      {/* Main Front Deck */}
-      <RoundedBox args={[3.6, 0.15, 2.4]} radius={0.02} position={[0, -0.075, 0.3]}>
-        <meshStandardMaterial color="#141416" metalness={0.9} roughness={0.2} />
+      {/* Base Chassis */}
+      <RoundedBox args={[3.6, 0.1, 2.4]} radius={0.02} position={[0, -0.05, 0]}>
+        <meshStandardMaterial 
+          color="#050505" 
+          metalness={0.7} 
+          roughness={0.8}
+          bumpMap={carbonTexture}
+          bumpScale={0.005}
+          roughnessMap={carbonTexture}
+        />
       </RoundedBox>
       
       {/* Extended Back Exhaust Block (Alienware m15 R5 style) */}
-      <RoundedBox args={[3.6, 0.15, 0.6]} radius={0.02} position={[0, -0.075, -1.2]}>
-        <meshStandardMaterial color="#0c0c0d" metalness={0.8} roughness={0.3} />
+      <RoundedBox args={[3.6, 0.15, 0.4]} radius={0.02} position={[0, -0.025, -1.3]}>
+        <meshStandardMaterial 
+          color="#050505" 
+          metalness={0.7} 
+          roughness={0.8}
+          bumpMap={carbonTexture}
+          bumpScale={0.005}
+          roughnessMap={carbonTexture}
+        />
       </RoundedBox>
 
       {/* The Tron Ring (Glowing ring around the exhaust) */}
       <mesh position={[0, -0.075, -1.52]}>
         <boxGeometry args={[3.45, 0.06, 0.05]} />
-        <meshStandardMaterial color="#8b5cf6" emissive="#8b5cf6" emissiveIntensity={2} />
+        <meshStandardMaterial color="#8b5cf6" emissive="#8b5cf6" emissiveIntensity={2} toneMapped={false} />
       </mesh>
       
       {/* Keyboard Well Indent */}
@@ -490,31 +752,90 @@ export default function Laptop() {
         <boxGeometry args={[3.0, 0.02, 1.2]} />
         <meshStandardMaterial color="#080808" />
       </mesh>
-      {/* Alienware Procedural Keyboard Matrix */}
-      <ProceduralKeyboard introStartRef={introStartRef} />
-      
-      {/* Trackpad */}
-      <mesh position={[0, 0.015, 1.1]}>
-        <boxGeometry args={[1.0, 0.01, 0.6]} />
-        <meshStandardMaterial color="#1a1a1c" roughness={0.6} />
+
+      {/* RGB Underglow Plate */}
+      <mesh ref={underglowRef} position={[0, 0.01, 0.2]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[2.9, 1.1]} />
+        <meshStandardMaterial color="#8b5cf6" emissive="#8b5cf6" emissiveIntensity={1} toneMapped={false} />
       </mesh>
+
+      {/* Alienware Procedural Keyboard Matrix */}
+      <ProceduralKeyboard introStartRef={introStartRef} isCustomModeRef={isCustomModeRef} />
+      
+      {/* Glowing Power Button (Alien Logo Style) */}
+      <mesh 
+        position={[1.5, 0.015, -0.45]} 
+        rotation={[0, Math.PI / 6, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          isCustomModeRef.current = !isCustomModeRef.current;
+        }}
+        onPointerOver={() => {
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = 'auto';
+        }}
+      >
+        <cylinderGeometry args={[0.04, 0.04, 0.01, 6]} />
+        <meshStandardMaterial color="#8b5cf6" emissive="#8b5cf6" emissiveIntensity={2} toneMapped={false} />
+      </mesh>
+      
+      {/* Speaker / Ventilation Grille (Sports car vent style) */}
+      <group position={[-0.1, 0.01, -0.65]}>
+        {[...Array(5)].map((_, i) => (
+          <mesh key={i} position={[0, 0, i * 0.06 - 0.12]}>
+            <boxGeometry args={[2.9, 0.01, 0.02]} />
+            <meshStandardMaterial color="#050505" roughness={0.9} />
+          </mesh>
+        ))}
+      </group>
+      
+      {/* Trackpad (Wide, glass-like surface) */}
+      <RoundedBox args={[1.2, 0.005, 0.4]} radius={0.01} position={[0, 0.0025, 0.97]}>
+        <meshStandardMaterial color="#0d0d0f" metalness={0.6} roughness={0.4} />
+      </RoundedBox>
 
       {/* 2. HINGE AND LID ASSEMBLY */}
       {/* Hinge Pivot (positioned slightly forward from the back exhaust) */}
       <group ref={hingeRef} position={[0, 0.0, -0.9]}>
         
+        {/* Left Hinge Joint */}
+        <mesh position={[-1.2, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.08, 0.08, 0.4, 32]} />
+          <meshStandardMaterial color="#0a0a0b" roughness={0.4} metalness={0.8} />
+        </mesh>
+        
+        {/* Right Hinge Joint */}
+        <mesh position={[1.2, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.08, 0.08, 0.4, 32]} />
+          <meshStandardMaterial color="#0a0a0b" roughness={0.4} metalness={0.8} />
+        </mesh>
         {/* Lid Assembly (Offset so the bottom edge pivots precisely at the hinge) */}
         <group position={[0, 1.1, 0]}>
           
           {/* Lid Outer Shell */}
           <RoundedBox args={[3.6, 2.2, 0.1]} radius={0.02} position={[0, 0, -0.05]}>
-            <meshStandardMaterial color="#141416" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial 
+              color="#050505" 
+              metalness={0.7} 
+              roughness={0.8}
+              bumpMap={carbonTexture}
+              bumpScale={0.005}
+              roughnessMap={carbonTexture}
+            />
           </RoundedBox>
 
-          {/* Screen Inner Bezel */}
+          {/* Glowing Lid Logo (Alien Hexagon) */}
+          <mesh position={[0, 0, -0.101]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.15, 0.15, 0.01, 6]} />
+            <meshStandardMaterial color="#8b5cf6" emissive="#8b5cf6" emissiveIntensity={2} toneMapped={false} />
+          </mesh>
+
+          {/* Screen Inner Bezel / Rubber Gasket */}
           <mesh position={[0, 0, 0.01]}>
             <boxGeometry args={[3.5, 2.1, 0.02]} />
-            <meshStandardMaterial color="#050505" />
+            <meshStandardMaterial color="#020202" roughness={0.9} metalness={0.1} />
           </mesh>
 
           {/* Screen Panel (Pitch Black display surface) */}
@@ -542,12 +863,14 @@ export default function Laptop() {
 
   return (
     <>
+      <Environment preset="city" />
+      
       <group ref={groupRef}>
         {ProceduralLaptopGeometry}
       </group>
 
       <group ref={shadowRef}>
-        <ContactShadows opacity={0.55} scale={6} blur={2.4} far={2} color="#000000" />
+        <ContactShadows resolution={256} opacity={0.55} scale={6} blur={2.4} far={2} color="#000000" />
       </group>
     </>
   );
