@@ -1,43 +1,21 @@
-# Astro Starter Kit: Minimal
+# Usman's portfolio
 
-```sh
-npm create astro@latest -- --template minimal
-```
+Personal portfolio at https://usmanbutt.dev, built with Astro, CSS, TypeScript, Scroll Craft, and locally hosted Archivo fonts.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+The homepage tells a chaptered story with calm scroll animation. `/projects/` contains 24 public projects and three approved client summaries. The current resume is `/Muhammad-Usman-Butt-Resume.pdf`.
 
-## 🚀 Project Structure
+## Development
 
-Inside of your Astro project, you'll see the following folders and files:
+Run `npm ci`, `npm run dev`, and `npm run build`. Production output is `dist/`. Use `npm.cmd` on PowerShell if script execution is restricted.
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+Homepage: `src/pages/index.astro`. Project index: `src/pages/projects/index.astro`. Styles: `src/styles/`. Promotional repository images are labelled on the site.
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Deployment
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+Vercel builds the `master` branch of `usmanbutt-dev/usmanbutt-portfolio`. Build command: `npm run build`. Output: `dist`. Domain DNS stays at Name.com.
 
-Any static assets, like images, can be placed in the `public/` directory.
+Publish only reviewed source, public assets, configuration, and site checks. Private research and resume drafts stay local.
 
-## 🧞 Commands
+## Verification
 
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+`node scripts/check-site.mjs` checks drawing controls, overflow, browser errors, contact details, and 27 project entries on desktop/mobile and in reduced-motion/no-JavaScript modes. It uses installed Microsoft Edge. Set `SITE_URL` to check another deployment.
