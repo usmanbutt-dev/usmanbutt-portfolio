@@ -3,9 +3,10 @@ import '@fontsource-variable/archivo';
 import '../styles/site.css';
 import Hero from '../components/Hero.astro';
 import Analytics from '@vercel/analytics/astro';
+import PageMeta from '../components/PageMeta.astro';
 const chapters = [['start','The beginning'],['practice','Work in practice'],['tools','Better tools'],['win','A team win'],['create','More possibilities'],['about','The person']];
 ---
-<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/><meta name="description" content="Muhammad Usman Butt, software engineer in Lahore. Unity, multiplayer and VR, full-stack web and mobile, and AI/RAG systems. Explore projects, experience, and resume."/><link rel="canonical" href="https://usmanbutt.dev/"/><link rel="icon" href="/favicon.svg"/><title>Muhammad Usman Butt · Made to interact</title><link rel="stylesheet" href="/scrollcraft.css"/></head>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/><PageMeta title="Muhammad Usman Butt · Software Engineer" description="Muhammad Usman Butt, software engineer in Lahore. Unity, multiplayer and VR, full-stack web and mobile, and AI/RAG systems. Explore projects, experience, and resume." /><link rel="stylesheet" href="/scrollcraft.css"/></head>
 <body><a class="skip" href="#main">Skip to content</a>
 <header class="masthead"><a class="wordmark" href="#top" aria-label="Usman Butt, top">ub<span>↗</span></a><span class="edition">A developer's field notes<br/>Lahore, Pakistan / 2026</span><nav class="header-nav" aria-label="Main navigation"><a href="/projects/">Projects</a><a href="#practice">Experience</a><a target="_blank" rel="noopener noreferrer" href="/Muhammad-Usman-Butt-Resume.pdf" class="resume-top">Resume</a><a class="contact-top" href="mailto:buttu7666@gmail.com">Say hello <span>↗</span></a></nav></header>
 <main id="main">

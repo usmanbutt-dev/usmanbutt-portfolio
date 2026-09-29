@@ -2,6 +2,7 @@
 import '@fontsource-variable/archivo';
 import '../../styles/site.css';
 import Analytics from '@vercel/analytics/astro';
+import PageMeta from '../../components/PageMeta.astro';
 const vibeCoded = new Set(['antigravity-unity', 'unity-mcp', 'ArcSmith', 'NijiStream', 'ZeroToCode', 'CineStream']);
 const pageLinks = new Map([
   ...['DiceGame', 'ExpandingCards', 'fizzBuzz', 'rock-paper-scissors', 'etch-a-sketch', 'calculator', 'tic-tac-toe', 'my-tic-tac-toe', 'my-weather-checker', 'boat-breaker', 'admin-dashboard'].map(repo => [repo, 'Live demo']),
@@ -44,7 +45,7 @@ const groups = [
 ---
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/><meta name="description" content="Selected projects by software engineer Muhammad Usman Butt: Unity games and VR, developer tools, web and mobile applications, and AI systems."/><link rel="canonical" href="https://usmanbutt.dev/projects/"/><link rel="icon" href="/favicon.svg"/><title>Project index · Muhammad Usman Butt</title></head>
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/><PageMeta title="Projects · Muhammad Usman Butt" description="Selected projects by software engineer Muhammad Usman Butt: Unity games and VR, developer tools, web and mobile applications, and AI systems." /></head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="masthead"><a class="wordmark" href="/" aria-label="Usman Butt, home">ub<span>↗</span></a><nav class="header-nav" aria-label="Main navigation"><a href="/#practice">Experience</a><a href="/Muhammad-Usman-Butt-Resume.pdf" class="resume-top" target="_blank" rel="noopener noreferrer">Resume</a><a href="mailto:buttu7666@gmail.com">Say hello ↗</a></nav></header>

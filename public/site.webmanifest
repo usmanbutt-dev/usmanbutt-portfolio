@@ -1,0 +1,12 @@
+{
+  "name": "Muhammad Usman Butt — Software Engineer",
+  "short_name": "Usman Butt",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#f4f2eb",
+  "theme_color": "#f4f2eb",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
