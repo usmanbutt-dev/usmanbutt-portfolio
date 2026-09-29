@@ -9,7 +9,7 @@ for(const [name,width,height,reducedMotion,javaScriptEnabled] of [['desktop',144
  await page.goto(base+'/',{waitUntil:'networkidle'});await page.screenshot({path:`${out}/${name}-top.png`});
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);if(overflow)throw new Error(name+' overflow');
  if(javaScriptEnabled){await page.locator('#paint-grid button').first().click();if(await page.locator('#paint-grid button').first().getAttribute('aria-pressed')!=='true')throw new Error('Paint failed');await page.locator('#clear-grid').click();if(await page.locator('#paint-grid button[aria-pressed=true]').count())throw new Error('Clear failed');}
- for(const id of ['start','tools','win','create','about']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.waitForTimeout(150);await page.screenshot({path:`${out}/${name}-${id}.png`});}
+ for(const id of ['start','practice','tools','win','create','about']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.waitForTimeout(150);await page.screenshot({path:`${out}/${name}-${id}.png`});}
  if(!await page.locator('a[href="mailto:buttu7666@gmail.com"]').count())throw new Error('Email missing');
  await page.goto(base+'/projects/',{waitUntil:'networkidle'});if(await page.locator('.index-row').count()!==27)throw new Error('Index count');if(errors.length)throw new Error(errors.join('\n'));results.push({name,overflow,errors,projectEntries:27});await page.close();
 }

@@ -14,10 +14,10 @@ const work=[
 ['NijiStream','NijiStream','A Flutter media application built around JavaScript source extensions.'],
 ['ZeroToCode','ZeroToCode','Programming education with browser-based C++ execution and trace visualization.'],
 ['MountainClimberVR','MountainClimberVR','A Unity VR climbing prototype exploring release momentum and hazards.'],
-['ThresholdGame','ThresholdGame','Procedural game generation with validation and hosted AI integrations.'],
+['ThresholdGame','THRESHOLD','A Unity game with AI-driven dungeon generation and NPC decisions. Placed fifth among 200 teams at the Google Antigravity Mobile Game Challenge 2026.'],
 ['Pokedex','Pokedex','A React Native / Expo Pokédex with pagination and local caching.'],
 ['CineStream','CineStream','An extension-driven Flutter movies and television client.'],
-['UnityModularInventorySystem','Unity inventory system','An exploration of item definitions, pickups, stacking and inventory UI.'],
+['UnityModularInventorySystem','Unity inventory system','A reusable Unity inventory framework with ScriptableObject item data, stacking, and separate data, logic, and UI.'],
 ['Pong','Pong','A Unity recreation with a reactive CPU opponent and local controls.'],
 ['WebTechProject','Web technology project','A Django portfolio backend with structured content models.'],
 ['DiceGame','Dice game','A small browser experiment with random rolls and comparison.'],
@@ -33,5 +33,45 @@ const work=[
 ['boat-breaker','Boat Breaker','A Unity browser game demonstration.'],
 ];
 const clientWork=[['CardGame','Freelance Unity card and board-game application with multiplayer systems.'],['AR_Navigation','Freelance AR navigation application with route guidance.'],['Ananse','Freelance Android educational application with interactive learning features.']];
+const groups = [
+  { id: 'selected', title: 'Selected work', description: 'Start with these: open-source tools, applications, and award-winning games.', repos: ['antigravity-unity', 'SoftcomProject', 'ArcSmith', 'NijiStream', 'ZeroToCode', 'ThresholdGame'] },
+  { id: 'games-tools', title: 'Games, VR & developer tools', description: 'Unity gameplay, immersive interaction, and tools for other developers.', repos: ['unity-mcp', 'MountainClimberVR', 'UnityModularInventorySystem', 'Pong', 'boat-breaker'] },
+  { id: 'web-mobile', title: 'Web & mobile applications', description: 'Interfaces, APIs, data, and extensible applications.', repos: ['Pokedex', 'CineStream', 'WebTechProject', 'my-weather-checker', 'admin-dashboard'] },
+  { id: 'foundations', title: 'Early browser experiments', description: 'Where I explored browser input, state, layout, and game rules. Kept here as a record of learning.', repos: ['DiceGame', 'ExpandingCards', 'fizzBuzz', 'rock-paper-scissors', 'etch-a-sketch', 'calculator', 'tic-tac-toe', 'my-tic-tac-toe'] },
+];
+
 ---
-<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/><meta name="description" content="Games, developer tools, web and mobile projects by Muhammad Usman Butt."/><link rel="canonical" href="https://usmanbutt.dev/projects/"/><link rel="icon" href="/favicon.svg"/><title>Project index · Muhammad Usman Butt</title></head><body><a class="skip" href="#main">Skip to content</a><header class="masthead"><a class="wordmark" href="/">ub<span>↗</span></a><a href="mailto:buttu7666@gmail.com">Say hello ↗</a></header><main id="main" class="wrap"><div class="index-header"><a href="/">← Back to the story</a><h1>The project index<span class="blue">.</span></h1><p>A collection of tools, games, applications, and small experiments.</p></div><div class="project-index">{work.map(([repo,name,description])=><article class="index-row"><h2>{name}</h2><div><p>{description}</p>{vibeCoded.has(repo) && <p class="build-method"><span>Vibe-coded</span> <strong>Human-designed, AI-implemented</strong></p>}</div><div class="index-links">{pageLinks.has(repo) && <a href={'https://usmanbutt-dev.github.io/'+repo+'/'} target="_blank" rel="noopener noreferrer">{pageLinks.get(repo)} ↗</a>}<a href={'https://github.com/usmanbutt-dev/'+repo} target="_blank" rel="noopener noreferrer">Repository ↗</a></div></article>)}<h2>Selected freelance work</h2><p class="caption">High-level summaries. Client details and source code are private.</p>{clientWork.map(([name,description])=><article class="index-row"><h2>{name}</h2><p>{description}</p><span class="caption">Client work</span></article>)}</div></main><footer class="wrap footer"><span>© 2026 Muhammad Usman Butt</span><a href="mailto:buttu7666@gmail.com">Contact ↗</a></footer></body></html>
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/><meta name="description" content="Selected projects by software engineer Muhammad Usman Butt: Unity games and VR, developer tools, web and mobile applications, and AI systems."/><link rel="canonical" href="https://usmanbutt.dev/projects/"/><link rel="icon" href="/favicon.svg"/><title>Project index · Muhammad Usman Butt</title></head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="masthead"><a class="wordmark" href="/" aria-label="Usman Butt, home">ub<span>↗</span></a><nav class="header-nav" aria-label="Main navigation"><a href="/#practice">Experience</a><a href="/Muhammad-Usman-Butt-Resume.pdf" class="resume-top" target="_blank" rel="noopener noreferrer">Resume</a><a href="mailto:buttu7666@gmail.com">Say hello ↗</a></nav></header>
+<main id="main" class="wrap">
+<div class="index-header">
+<a href="/">← Back to the story</a><h1>The project index<span class="blue">.</span></h1>
+<p>Selected work first, followed by projects grouped by what they explore.</p>
+<p>For my AI/full-stack internship and studio roles, <a href="/#practice">read about my professional experience</a>.</p>
+<p class="caption">Vibe-coded means I designed the system and used AI to write its implementation. <a href="/#build-methods">More about how I work with AI</a>.</p>
+<nav class="small-links" aria-label="Project categories">{groups.map(group => <><a href={'#'+group.id}>{group.title}</a>{group.id === 'selected' && <a href="#client-work">Client work</a>}</>)}</nav>
+</div>
+<div class="project-index">
+{groups.map(group => <>
+<section class="index-group" aria-labelledby={group.id}>
+<h2 id={group.id}>{group.title}</h2><p>{group.description}</p>
+{work.filter(([repo]) => group.repos.includes(repo)).map(([repo,name,description]) => <article class="index-row">
+<h3>{name}</h3>
+<div><p>{description}</p>{vibeCoded.has(repo) && <p class="caption">Vibe-coded · System design by me; AI-written implementation.</p>}</div>
+<div class="index-links">{pageLinks.has(repo) && <a href={'https://usmanbutt-dev.github.io/'+repo+'/'} target="_blank" rel="noopener noreferrer">{pageLinks.get(repo)} ↗</a>}<a href={'https://github.com/usmanbutt-dev/'+repo} target="_blank" rel="noopener noreferrer">Repository ↗</a></div>
+</article>)}
+</section>
+{group.id === 'selected' && <section class="index-group" aria-labelledby="client-work">
+<h2 id="client-work">Selected freelance work</h2><p>Built for freelance clients. These are high-level summaries; client details and source code are private.</p>
+{clientWork.map(([name,description]) => <article class="index-row"><h3>{name}</h3><p>{description}</p><span class="caption">Client work</span></article>)}
+</section>}
+</>)}
+</div>
+</main>
+<footer class="wrap footer"><span>© 2026 Muhammad Usman Butt</span><a href="mailto:buttu7666@gmail.com">Contact ↗</a></footer>
+</body>
+</html>
