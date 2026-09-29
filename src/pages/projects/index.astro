@@ -1,6 +1,7 @@
 ---
 import '@fontsource-variable/archivo';
 import '../../styles/site.css';
+import Analytics from '@vercel/analytics/astro';
 const vibeCoded = new Set(['antigravity-unity', 'unity-mcp', 'ArcSmith', 'NijiStream', 'ZeroToCode', 'CineStream']);
 const pageLinks = new Map([
   ...['DiceGame', 'ExpandingCards', 'fizzBuzz', 'rock-paper-scissors', 'etch-a-sketch', 'calculator', 'tic-tac-toe', 'my-tic-tac-toe', 'my-weather-checker', 'boat-breaker', 'admin-dashboard'].map(repo => [repo, 'Live demo']),
@@ -73,5 +74,6 @@ const groups = [
 </div>
 </main>
 <footer class="wrap footer"><span>© 2026 Muhammad Usman Butt</span><a href="mailto:buttu7666@gmail.com">Contact ↗</a></footer>
+<Analytics />
 </body>
 </html>

@@ -2,6 +2,7 @@
 import '@fontsource-variable/archivo';
 import '../styles/site.css';
 import Hero from '../components/Hero.astro';
+import Analytics from '@vercel/analytics/astro';
 const chapters = [['start','The beginning'],['practice','Work in practice'],['tools','Better tools'],['win','A team win'],['create','More possibilities'],['about','The person']];
 ---
 <!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/><meta name="description" content="Muhammad Usman Butt, software engineer in Lahore. Unity, multiplayer and VR, full-stack web and mobile, and AI/RAG systems. Explore projects, experience, and resume."/><link rel="canonical" href="https://usmanbutt.dev/"/><link rel="icon" href="/favicon.svg"/><title>Muhammad Usman Butt · Made to interact</title><link rel="stylesheet" href="/scrollcraft.css"/></head>
@@ -37,4 +38,5 @@ const chapters = [['start','The beginning'],['practice','Work in practice'],['to
 <section id="about" class="chapter" data-sc-act="flow"><div class="chapter-label"><span>06 / The person</span><span>Lahore, Pakistan</span></div><h2>Still curious.<br/>Still building.</h2><p>I'm Muhammad Usman Butt, based in Lahore, Pakistan. I graduated with a BS in Computer Science from UMT in August 2026. Games were my starting point; building tools, applications, and AI integrations has given me more ways to turn an idea into something people can use.</p><p class="caption">BS Computer Science, UMT · Aug 2022–Aug 2026 · CGPA 3.50/4.00.<br/>Game-development community work with UMT ACM and GDGoC UMT.</p><p class="lead">I'm interested in software engineering roles across Unity and game development, full-stack applications, and applied AI.</p><div class="closing"><span class="tiny">The next chapter</span><h2>Have a role in mind?<br/>Let's talk<span class="blue">.</span></h2><a class="email" href="mailto:buttu7666@gmail.com">buttu7666@gmail.com ↗</a><div class="small-links"><a target="_blank" rel="noopener noreferrer" href="/Muhammad-Usman-Butt-Resume.pdf">Resume ↗</a><a href="https://github.com/usmanbutt-dev" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a href="https://www.linkedin.com/in/usmanbutt-dev/" target="_blank" rel="noopener noreferrer">LinkedIn ↗</a></div></div></section>
 </div></div></main><footer class="wrap footer"><span>© 2026 Muhammad Usman Butt</span><a href="#top">Back to the beginning ↑</a></footer>
 <script is:inline src="/scrollcraft.js"></script><script>import '../scripts/story';</script>
+<Analytics />
 </body></html>
